@@ -84,7 +84,8 @@ If you use **bioentro** in your research, please cite it as follows:
   title = {Bioentro: Genomic and Proteomic Information Complexity Analysis},
   url = {[https://github.com/jcmenjr/bioentro](https://github.com/jcmenjr/bioentro)},
   version = {1.0.0},
-  year = {2026}
+  year = {2026},
+  orcid = {0009-0007-2468-6261}
 }
 ```
 ---
