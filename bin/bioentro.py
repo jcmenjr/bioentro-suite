@@ -6,6 +6,8 @@ import sys
 import logging
 import math
 import os
+import zlib
+import re
 from collections import Counter
 from Bio import SeqIO
 
@@ -15,9 +17,9 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
-# 2. CALC FUNCTIONS
-def get_metrics(sequence, k, is_protein=False):
-    """ Calculate metrics adapting the alphabet (4 for DNA, 20 for Protein)."""
+# 2. CORE FUNCTIONS
+def calculate_shannon_kl(sequence, k, is_protein=True):
+    """Calculates Shannon Entropy and KL Divergence."""
     alphabet_size = 20 if is_protein else 4
     h_max = math.log2(alphabet_size**k)
     p_uniform = 1 / (alphabet_size**k)
@@ -41,22 +43,41 @@ def get_metrics(sequence, k, is_protein=False):
         p_i = c / total
         h_real -= p_i * math.log2(p_i)
         kl_divergence += p_i * math.log2(p_i / p_uniform)
-
+        
     return h_real, kl_divergence, h_max
 
+def calculate_kolmogorov(sequence):
+    """Approximates Kolmogorov Complexity using zlib."""
+    if not sequence:
+        return 0.0
+    try:
+        bytes_seq = sequence.encode('utf-8')
+        compressed = zlib.compress(bytes_seq, level=9)
+        return round(len(compressed) / len(bytes_seq), 4)
+    except Exception:
+        return 0.0
+
 def process_dna_mode(fna_path, gff_path, kmer_size):
-    """Process the complete genome (Nucleotides)."""
+    """Processes genome and extracts CLEAN Organism Name."""
     try:
         records = list(SeqIO.parse(fna_path, "fasta"))
+        if not records:
+            return None
+            
+        # Extracts only the clean name [organism=...]
+        full_desc = records[0].description
+        match = re.search(r'\[organism=([^\]]+)\]', full_desc)
+        org_name = match.group(1) if match else full_desc.split(' ')[0]
+        
         raw_seq = "".join(str(r.seq).upper() for r in records)
         genome_seq = "".join(b for b in raw_seq if b in "ACGNT")
         
         size_mb = len(genome_seq) / 1e6
-        h_real, kl_div, h_max = get_metrics(genome_seq, kmer_size, is_protein=False)
-        efficiency = (h_real / h_max) * 100 if h_max > 0 else 0
+        h_real, kl_div, h_max = calculate_shannon_kl(genome_seq, kmer_size, is_protein=False)
+        kolmo = calculate_kolmogorov(genome_seq)
         
-        gc_count = genome_seq.count('G') + genome_seq.count('C')
-        gc_pct = (gc_count / len(genome_seq)) * 100 if genome_seq else 0
+        efficiency = (h_real / h_max) * 100 if h_max > 0 else 0
+        gc_pct = ((genome_seq.count('G') + genome_seq.count('C')) / len(genome_seq)) * 100 if genome_seq else 0
 
         total_cds = 0
         with open(gff_path, 'r') as gff:
@@ -65,87 +86,79 @@ def process_dna_mode(fna_path, gff_path, kmer_size):
                     total_cds += 1
         
         return {
-            "size_mb": size_mb, "gc": gc_pct, "h_max": h_max, 
+            "organism": org_name, "size_mb": size_mb, "gc": gc_pct, "h_max": h_max, 
             "h_real": h_real, "kl_div": kl_div, "efficiency": efficiency,
-            "total_cds": total_cds, "density": total_cds / size_mb if size_mb > 0 else 0
+            "kolmogorov": kolmo, "total_cds": total_cds, "density": total_cds / size_mb if size_mb > 0 else 0
         }
     except Exception as e:
-        logging.error(f"Error in DNA mode: {e}")
-        sys.exit(1)
+        logging.error(f"Error en DNA mode: {e}"); sys.exit(1)
 
 def process_protein_mode(faa_path, kmer_size):
-    """Process proteins with a statistical reliability semaphore."""
+    """Processes proteome and cleans up Protein Labels."""
     results = []
-    # Threshold for reliability: at least half of the possible k-mers should be present in the sequence
     threshold = (20**kmer_size) / 2 
-    
     try:
         for record in SeqIO.parse(faa_path, "fasta"):
-            seq_len = len(record.seq)
-            h_real, kl_div, h_max = get_metrics(str(record.seq).upper(), kmer_size, is_protein=True)
-            efficiency = (h_real / h_max) * 100 if h_max > 0 else 0
-            status = "Reliable" if seq_len >= threshold else "Low_Sample"
+            seq_str = str(record.seq).upper()
+            
+            # Clean product name by removing ID and any bracketed info
+            product = record.description.replace(record.id, "").strip()
+            product = re.sub(r'\[[^\]]+\]', '', product).strip() # Deep cleaning
+            if not product: product = "hypothetical protein"
+            
+            h_real, kl_div, h_max = calculate_shannon_kl(seq_str, kmer_size, is_protein=True)
+            kolmo = calculate_kolmogorov(seq_str)
             
             results.append({
-                "ID": record.id,
-                "Len_AA": seq_len,
-                "H_max": h_max,
-                "H_real": h_real,
-                "KL_Div": kl_div,
-                "Efficiency": efficiency,
-                "Status": status
+                "ID": record.id, "Product": product, "Len": len(seq_str), 
+                "H_max": h_max, "H_real": h_real, "KL": kl_div, 
+                "Eff": (h_real/h_max)*100 if h_max > 0 else 0,
+                "Kolmo": kolmo, "Status": "Reliable" if len(seq_str) >= threshold else "Low_Sample"
             })
         return results
     except Exception as e:
-        logging.error(f"Error in Protein Mode: {e}")
-        sys.exit(1)
+        logging.error(f"Error en Protein Mode: {e}"); sys.exit(1)
 
 # 3. CLI ARGUMENTS
 def parse_args():
-    parser = argparse.ArgumentParser(description="bioentro v1.0.0: DNA and Proteins")
+    parser = argparse.ArgumentParser(description="bioentro v1.1.0: Informational Complexity Suite")
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("-f", "--fasta", help="fasta file with DNA sequences (.fna)")
-    group.add_argument("-a", "--aminoacids", help="fasta file with protein sequences (.faa)")
-    parser.add_argument("-g", "--gff", help="GFF annotation (required for DNA mode)")
-    parser.add_argument("-k", "--kmer", type=int, default=2, help="K-mer size (usually DNA=6, AA=2)")
+    group.add_argument("-f", "--fasta", help="DNA sequences (.fna)")
+    group.add_argument("-a", "--aminoacids", help="Protein sequences (.faa)")
+    parser.add_argument("-g", "--gff", help="GFF annotation")
+    parser.add_argument("-k", "--kmer", type=int, default=None, help="K-mer size")
     parser.add_argument("-o", "--output", required=True, help="Output .tsv file")
     return parser.parse_args()
 
-# 4. ACCESS POINT
+# 4. MAIN
 def main():
     args = parse_args()
+    k_eff = args.kmer if args.kmer is not None else (6 if args.fasta else 1)
+
     output_dir = os.path.dirname(args.output)
     if output_dir and not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
     if args.aminoacids:
-        cepa_id = os.path.basename(args.aminoacids).split('.')[0]
-        logging.info(f"Protein mode: Processing {cepa_id}")
-        data = process_protein_mode(args.aminoacids, args.kmer)
-        
-        # WRITING FOR PROTEIN MODE
+        logging.info(f"Processing Proteins (k={k_eff})...")
+        data = process_protein_mode(args.aminoacids, k_eff)
         with open(args.output, 'w') as out:
-            # Header with all columns
-            out.write("Prot_ID\tLen_AA\tH_max\tH_real\tKL_Div\tEfficiency\tStatus\n")
+            out.write("Prot_ID\tProduct\tLen_AA\tH_max\tH_real\tKL_Div\tEfficiency\tKolmogorov\tStatus\n")
             for p in data:
-                out.write(f"{p['ID']}\t{p['Len_AA']}\t{p['H_max']:.4f}\t{p['H_real']:.4f}\t"
-                          f"{p['KL_Div']:.4f}\t{p['Efficiency']:.2f}\t{p['Status']}\n")
+                out.write(f"{p['ID']}\t{p['Product']}\t{p['Len']}\t{p['H_max']:.4f}\t{p['H_real']:.4f}\t"
+                          f"{p['KL']:.4f}\t{p['Eff']:.2f}\t{p['Kolmo']:.4f}\t{p['Status']}\n")
     else:
         if not args.gff:
-            logging.error("The DNA mode requires a GFF file (-g).")
-            sys.exit(1)
-        cepa_id = os.path.basename(args.fasta).split('.')[0]
-        logging.info(f"DNA mode: Processing {cepa_id}")
-        res = process_dna_mode(args.fasta, args.gff, args.kmer)
-        
-        # WRITING FOR DNA MODE
+            logging.error("DNA mode requires a GFF file (-g)."); sys.exit(1)
+        logging.info(f"Processing DNA (k={k_eff})...")
+        res = process_dna_mode(args.fasta, args.gff, k_eff)
         with open(args.output, 'w') as out:
-            out.write("ID\tSize_Mb\tGC_Pct\tH_max\tH_real\tKL_Div\tEfficiency\tCDS\tDensity\n")
-            out.write(f"{cepa_id}\t{res['size_mb']:.4f}\t{res['gc']:.2f}\t{res['h_max']:.4f}\t"
-                      f"{res['h_real']:.4f}\t{res['kl_div']:.4f}\t{res['efficiency']:.2f}\t"
-                      f"{res['total_cds']}\t{res['density']:.2f}\n")
+            out.write("Organism\tSize_Mb\tGC_Pct\tH_max\tH_real\tKL_Div\tEfficiency\tKolmogorov\tCDS\tDensity\n")
+            out.write(f"{res['organism']}\t{res['size_mb']:.4f}\t{res['gc']:.2f}\t"
+                      f"{res['h_max']:.4f}\t{res['h_real']:.4f}\t{res['kl_div']:.4f}\t"
+                      f"{res['efficiency']:.2f}\t{res['kolmogorov']:.4f}\t{res['total_cds']}\t{res['density']:.2f}\n")
     
-    logging.info(f"Success. File generated at: {args.output}")
+    logging.info(f"Success! Output: {args.output}")
 
 if __name__ == "__main__":
     main()
