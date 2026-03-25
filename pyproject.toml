@@ -1,26 +1,90 @@
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
+# ── Project metadata ──────────────────────────────────────────────────────────
 [project]
-name = "bioentro"
-version = "1.0.0"
-description = "Informational complexity and entropy analysis for genomic and proteomic data."
-readme = "README.md"
-requires-python = ">=3.7"
-license = {text = "MIT"}
+name            = "bioentro-suite"
+version         = "0.1.0"
+description     = "Informational Analysis Suite for Biological Sequences"
+readme          = "README.md"
+license         = { file = "LICENSE" }
+requires-python = ">=3.9"
 
-dependencies = [
-"biopython>=1.80",
-"pandas>=1.5.0"
+authors = [
+    { name = "Julio Méndez" },
 ]
 
-[[project.authors]]
-name = "Julio Méndez"
-email = "jcmenjr@gmail.com"
+keywords = [
+    "bioinformatics",
+    "information-theory",
+    "shannon-entropy",
+    "protein",
+    "genomics",
+    "pseudomonas",
+]
 
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Bio-Informatics",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+
+# ── Runtime dependencies ──────────────────────────────────────────────────────
+dependencies = [
+    "biopython>=1.79",
+    "pandas>=1.5",
+    "numpy>=1.23",
+    "networkx>=3.0",
+    "matplotlib>=3.6",
+    "scipy>=1.9",
+    "scikit-learn>=1.1",
+]
+
+# ── Optional / development dependencies ──────────────────────────────────────
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.4",           # linter + formatter
+    "mypy>=1.0",           # type checker
+    "pandas-stubs",
+]
+
+# ── CLI entry points (these become shell commands after pip install) ──────────
 [project.scripts]
-bioentro = "bin.bioentro:main"
+bioentro = "bioentro.bioentro:main"
+netentro = "bioentro.netentro:main"
 
-[tool.setuptools]
-packages = ["bin"]
+# ── Package discovery ─────────────────────────────────────────────────────────
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["bioentro*"]
+
+# ── Ruff (linter) configuration ───────────────────────────────────────────────
+[tool.ruff]
+line-length    = 99
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM"]
+ignore = ["E501"]   # line length handled by formatter
+
+# ── Mypy (type checker) configuration ────────────────────────────────────────
+[tool.mypy]
+python_version         = "3.9"
+warn_return_any        = true
+warn_unused_configs    = true
+ignore_missing_imports = true   # numpy/scipy stubs not always available
+
+# ── Pytest configuration ──────────────────────────────────────────────────────
+[tool.pytest.ini_options]
+testpaths    = ["tests"]
+addopts      = "-v --tb=short"

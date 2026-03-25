@@ -4,7 +4,7 @@ authors:
 - family-names: "Méndez Zamudio"
   given-names: "Julio"
   orcid: "[https://orcid.org/0009-0007-2468-6261](https://orcid.org/0009-0007-2468-6261)"
-title: "Bioentro: Genomic and Proteomic Information Complexity Analysis"
-version: 1.0.0
+title: "bioentro suite — Informational Analysis Suite for Biological Sequences"
+version: 0.1.0
 date-released: 2026-03-16
-url: "https://github.com/jcmenjr/bioentro"
+url: "https://github.com/jcmenjr/bioentro-suite"
