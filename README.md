@@ -22,7 +22,7 @@ Developed as part of a thesis on the application of information theory to the fu
 ### From GitHub (recommended for development)
  
 ```bash
-git clone https://github.com/<your-username>/bioentro-suite.git
+git clone https://github.com/jcmenjr/bioentro-suite.git
 cd bioentro-suite
 pip install -e .
 ```
@@ -32,7 +32,7 @@ The `-e` flag installs in *editable* mode: changes to the source files take effe
 ### From GitHub (stable, no source needed)
  
 ```bash
-pip install git+https://github.com/<your-username>/bioentro-suite.git
+pip install git+https://github.com/jcmenjr/bioentro-suite.git
 ```
  
 After installation, both `bioentro` and `netentro` are available as shell commands.
@@ -47,10 +47,10 @@ After installation, both `bioentro` and `netentro` are available as shell comman
 # Whole genome vs uniform background
 bioentro -i genome.fna -g genome.gff3 -m genome -o genome_metrics.tsv
  
-# Per-CDS vs full-genome background (detects HGT, pathogenicity islands)
+# Per-CDS vs full-genome background
 bioentro -i genome.fna -g genome.gff3 -m genes -o genes_metrics.tsv
  
-# Per-protein vs full-proteome background (IPS for prioritization)
+# Per-protein vs full-proteome background
 bioentro -i proteins.faa -m protein -o protein_metrics.tsv
  
 # Whole proteome vs uniform background
@@ -159,7 +159,7 @@ bioentro-suite/
  
 If you use bioentro suite in your research, please cite:
  
-> [Méndez,J.], [2026]. *Application of Information Theory to the Functional Prediction of Hypothetical Proteins in Clinical Isolates of Pseudomonas aeruginosa*. [Center of Research for Food and Development].
+> [Méndez,J.], [2026]. *bioentro suite — Informational Analysis Suite for Biological Sequences*. [Center of Research for Food and Development].
  
  ```bibtex
 @software{mendez2026bioentro-suite,
