@@ -1,10 +1,10 @@
 # bioentro suite
 
-**Informational Analysis Suite for Biological Sequences**
+**Informational Zoom Suite for Biological Sequences**
 
 A collection of command-line tools that apply information theory to biological sequences — measuring Shannon entropy, Jensen-Shannon divergence, Kolmogorov complexity, and an Informational Priority Score (IPS) to characterize and prioritize hypothetical proteins for experimental validation.
 
-Developed as part of a thesis on the application of information theory to the functional prediction of hypothetical proteins in clinical isolates of *Pseudomonas aeruginosa*.
+Developed as part of a thesis on the application of information theory to the functional prediction of hypothetical proteins in clinical isolates of *Pseudomonas aeruginosa*, with generalization to any bacterial system.
 
 ---
 
@@ -12,9 +12,10 @@ Developed as part of a thesis on the application of information theory to the fu
 
 | Tool | Description |
 |---|---|
-| `preparo` | Prepares genome files for the Bakta → Panaroo → bioentro pipeline: detects naming patterns (NCBI, assembler, custom), renames files consistently, verifies Bakta outputs, and generates ready-to-run Panaroo commands |
+| `preparo` | Prepares genome files for the Bakta → Panaroo → bioentro pipeline: detects naming patterns (NCBI, assembler, custom), renames files, verifies Bakta outputs, and generates ready-to-run Panaroo commands |
 | `bioentro` | Computes informational metrics across four biological levels: genome, genes (CDS), individual proteins, and whole proteome |
 | `netentro` | Builds informational similarity networks, predicts functional class of hypothetical proteins by centroid distance, and validates predictions with leave-one-out cross-validation |
+| `pangentro` | Integrates bioentro metrics with Panaroo pangenome output to analyze IPS distribution across core, shell, and cloud genomes |
 
 ---
 
@@ -36,7 +37,7 @@ The `-e` flag installs in *editable* mode: changes to the source files take effe
 pip install git+https://github.com/jcmenjr/bioentro-suite.git
 ```
 
-After installation, `preparo`, `bioentro`, and `netentro` are available as shell commands.
+After installation, `preparo`, `bioentro`, `netentro`, and `pangentro` are available as shell commands.
 
 ---
 
@@ -46,20 +47,23 @@ After installation, `preparo`, `bioentro`, and `netentro` are available as shell
 Raw .fna genomes (NCBI / assembler / own sequencing)
          │
          ▼
-   preparo detect   →  sample_map.tsv (review & edit names)
+   preparo detect   →  sample_map.tsv  (review & edit names)
    preparo rename   →  renamed .fna with clean locus tag prefixes
          │
-         ▼  (run Bakta manually — see rename output for the exact command)
+         ▼  Bakta  (manual — see rename output for the exact command)
          │
    preparo check    →  verify Bakta completeness and ID consistency
    preparo panaroo  →  generate ready-to-run Panaroo script
          │
-         ▼  (run Panaroo manually)
+         ▼  Panaroo  (manual)
          │
-   bioentro         →  informational metrics (.tsv per biological level)
-   netentro network →  similarity network visualization
-   netentro predict →  functional class prediction by centroid distance
-   netentro validate→  LOO cross-validation of prediction accuracy
+   pangentro run-bioentro  →  run bioentro on all isolates automatically
+   pangentro integrate     →  cross bioentro results with pangenome matrix
+   pangentro compare       →  statistics + figure: IPS by core/shell/cloud
+         │
+   netentro network   →  similarity network visualization
+   netentro predict   →  functional class prediction by centroid distance
+   netentro validate  →  LOO cross-validation of prediction accuracy
 ```
 
 ---
@@ -69,19 +73,19 @@ Raw .fna genomes (NCBI / assembler / own sequencing)
 ### Step 0 — Prepare genomes with `preparo`
 
 ```bash
-# Scan your genome directory and generate a naming map
+# Scan genome directory and generate naming map
 preparo detect -i genomes/ -o sample_map.tsv
 
 # Edit sample_map.tsv — set meaningful names in the 'new_name' column
 # Rules: unique, ≤12 chars, alphanumeric + underscore, no spaces
 
-# Rename files (also rewrites FASTA headers for downstream traceability)
+# Rename files (rewrites FASTA headers for downstream traceability)
 preparo rename -i genomes/ -m sample_map.tsv -o renamed/
 
 # After running Bakta, verify all outputs are complete and IDs match
 preparo check -i bakta_outputs/
 
-# Generate a ready-to-run Panaroo command script
+# Generate ready-to-run Panaroo command
 preparo panaroo -i bakta_outputs/ -o run_panaroo.sh -t 16
 bash run_panaroo.sh
 ```
@@ -102,7 +106,25 @@ bioentro -i proteins.faa -m protein -o protein_metrics.tsv
 bioentro -i proteins.faa -m proteome-global -o proteome_metrics.tsv
 ```
 
-### Step 2 — Analyze with `netentro`
+### Step 2 — Pangenomic analysis with `pangentro`
+
+```bash
+# Run bioentro on all isolates automatically
+pangentro run-bioentro -f bakta_outputs/ -o bioentro_results/
+
+# Integrate with Panaroo output (both IPS modes)
+pangentro integrate \
+    -p panaroo_output/gene_presence_absence.csv \
+    -b bioentro_results/ \
+    -r panaroo_output/pan_genome_reference.fa \
+    --ips-mode both \
+    -o pangenome_metrics.tsv
+
+# Statistical comparison and figure
+pangentro compare -i pangenome_metrics.tsv -o comparison/
+```
+
+### Step 3 — Network analysis with `netentro`
 
 ```bash
 # Visualize informational similarity network for a target protein
@@ -127,12 +149,12 @@ netentro validate -i protein_metrics.tsv -o validation.tsv
 
 | Subcommand | When to use | Description |
 |---|---|---|
-| `detect` | Before Bakta | Scans genome files, auto-detects names from FASTA headers, generates `sample_map.tsv` draft |
+| `detect` | Before Bakta | Scans genome files, auto-detects names from FASTA headers (`[organism=...]`, `[strain=...]`), generates `sample_map.tsv` draft |
 | `rename` | Before Bakta | Renames `.fna` files and rewrites FASTA headers using the edited map |
-| `check` | After Bakta | Verifies `.gff3`, `.faa`, and other expected files exist and IDs are consistent |
-| `panaroo` | After Bakta | Collects all `.gff3` files and writes a ready-to-run `panaroo` shell script |
+| `check` | After Bakta | Verifies `.gff3`, `.faa`, and other expected files exist; checks ID prefix consistency |
+| `panaroo` | After Bakta | Collects all `.gff3` files and writes a ready-to-run Panaroo shell script |
 
-`detect` auto-detects names from FASTA headers for NCBI downloads (`[organism=...]`, `[strain=...]`) and falls back to the short accession when headers have no metadata. Assembler outputs (SPAdes, Flye, Unicycler) get sequential placeholders that you edit manually.
+> Note: Panaroo may fail on GFF3 files containing selenocysteine codons (`transl_except=Sec`). Workaround: `grep -v "transl_except" input.gff3 > clean.gff3`. This is a known upstream bug (reported to Panaroo developers).
 
 ---
 
@@ -141,14 +163,43 @@ netentro validate -i protein_metrics.tsv -o validation.tsv
 | Subcommand | Description |
 |---|---|
 | `network` | Builds and saves an informational similarity network image |
-| `predict` | Ranks functional classes by centroid distance; reports confidence relative to intra-class dispersion |
+| `predict` | Ranks functional classes by centroid distance; confidence is relative to intra-class dispersion |
 | `validate` | Leave-one-out cross-validation: predicts each annotated protein and reports per-class precision, recall, and F1 |
 
 **Confidence formula (predict mode):**
 
 $$\text{Confidence}(C_k) = \max\left(0,\ 1 - \frac{d(t,\ C_k)}{\sigma_{C_k}}\right)$$
 
-Where $\sigma_{C_k}$ is the mean distance of class members to their centroid. A confidence of 0.5 means the target is as far from the centroid as the average class member. A confidence of 0.0 means the target lies outside the typical class radius — the prediction is unreliable regardless of rank.
+Where $\sigma_{C_k}$ is the mean distance of class members to their centroid. Confidence = 0.5 means the target is as far from the centroid as the average class member. Confidence = 0.0 means the target lies outside the typical class radius — the prediction is unreliable regardless of rank.
+
+> `netentro network` and `netentro predict` are exploratory tools. The network visualizes the informational space of the proteome; it does not assert functional equivalence. Use `netentro validate` to quantify method accuracy for your specific dataset before drawing biological conclusions.
+
+---
+
+## pangentro subcommands
+
+| Subcommand | Description |
+|---|---|
+| `run-bioentro` | Automates bioentro protein mode on all `.faa` files in a directory |
+| `integrate` | Crosses per-isolate bioentro TSVs with Panaroo `gene_presence_absence.csv`; supports two IPS modes |
+| `compare` | Kruskal-Wallis + pairwise Mann-Whitney U tests; generates publication figure |
+
+**IPS modes in `integrate`:**
+
+| Mode | Background | Interpretation |
+|---|---|---|
+| `individual` | Each protein's own isolate proteome | Atypicality within the organism's own compositional context |
+| `pangenomic` | Concatenated pan-proteome (all cluster representatives) | Atypicality within the species-level compositional space |
+| `both` | Both (recommended) | Enables cross-mode comparison for local vs species-level signals |
+
+**Pangenomic categories (Panaroo defaults):**
+
+| Category | Frequency | Biological interpretation |
+|---|---|---|
+| core | ≥ 99% of genomes | Essential, conserved — housekeeping functions |
+| soft_core | 95–99% | Near-universal — mostly conserved |
+| shell | 15–95% | Accessory — niche adaptation, HGT candidates |
+| cloud | < 15% | Rare — recent acquisition, possible mobile elements |
 
 ---
 
@@ -176,7 +227,15 @@ Where $\sigma_{C_k}$ is the mean distance of class members to their centroid. A 
 | `Kolmogorov` | zlib compression ratio — long-range complexity proxy | [0, 1] |
 | `IPS` | Efficiency × √JSD × length_penalty — priority score | [0, 1] |
 
-> `IPS` is only computed for `genes` and `protein` modes, where a background comparison is meaningful.
+> `IPS` identifies compositionally atypical sequences as candidates for further investigation — not as predictions of biological relevance. Relevance interpretation depends on the research question and biological context.
+
+---
+
+## Known limitations
+
+- `netentro predict` accuracy varies by functional class. Classes with strong compositional signatures (membrane proteins, secreted proteins) predict more reliably than classes defined by positional motifs (polymerases, regulators). Always run `netentro validate` to quantify accuracy for your specific dataset.
+- `IPS_pan` values (pangenomic mode) are lower in absolute terms than individual-mode IPS because the pan-proteome background is more diverse. Statistical differences between categories are meaningful but absolute values should not be compared across datasets with different pangenome sizes.
+- Selenoprotein genes (`transl_except=Sec`) cause Panaroo to crash even with `--remove-invalid-genes`. Workaround: remove with `grep -v "transl_except"`. Document excluded genes as a methodological note.
 
 ---
 
@@ -222,7 +281,8 @@ bioentro-suite/
 │   ├── __init__.py       # Package metadata and public API
 │   ├── bioentro.py       # Informational metrics (genome, genes, protein, proteome)
 │   ├── netentro.py       # Similarity network, functional prediction, LOO validation
-│   └── preparo.py        # Genome preparation: detect, rename, check, panaroo
+│   ├── preparo.py        # Genome preparation: detect, rename, check, panaroo
+│   └── pangentro.py      # Pangenomic integration: run-bioentro, integrate, compare
 ├── conda.recipe/
 │   └── meta.yaml         # Conda/Bioconda recipe
 ├── workflow/
@@ -245,12 +305,12 @@ bioentro-suite/
 
 If you use bioentro suite in your research, please cite:
 
-> Méndez, J. (2026). *bioentro suite — Informational Analysis Suite for Biological Sequences*. Centro de Investigación en Alimentación y Desarrollo (CIAD).
+> Méndez, J. (2026). *bioentro suite — Informational Zoom Suite for Biological Sequences*. Centro de Investigación en Alimentación y Desarrollo (CIAD).
 
 ```bibtex
 @software{mendez2026bioentro,
   author  = {Méndez, Julio},
-  title   = {bioentro suite — Informational Analysis Suite for Biological Sequences},
+  title   = {bioentro suite — Informational Zoom Suite for Biological Sequences},
   url     = {https://github.com/jcmenjr/bioentro-suite},
   version = {0.1.0},
   year    = {2026},
