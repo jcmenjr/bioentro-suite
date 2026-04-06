@@ -5,14 +5,14 @@ build-backend = "setuptools.build_meta"
 # ── Project metadata ──────────────────────────────────────────────────────────
 [project]
 name            = "bioentro-suite"
-version         = "0.1.0"
+version         = "0.3.0"
 description     = "Informational Analysis Suite for Biological Sequences"
 readme          = "README.md"
 license         = { file = "LICENSE" }
 requires-python = ">=3.9"
 
 authors = [
-    { name = "Julio Méndez" },
+    { name = "Julio Méndez", email = "jcmenjr@gmail.com" },
 ]
 
 keywords = [
@@ -22,6 +22,7 @@ keywords = [
     "protein",
     "genomics",
     "pseudomonas",
+    "pangenomics",
 ]
 
 classifiers = [
@@ -62,6 +63,8 @@ dev = [
 [project.scripts]
 bioentro = "bioentro.bioentro:main"
 netentro = "bioentro.netentro:main"
+preparo  = "bioentro.preparo:main"
+pangentro = "bioentro.pangentro:main"
 
 # ── Package discovery ─────────────────────────────────────────────────────────
 [tool.setuptools.packages.find]
