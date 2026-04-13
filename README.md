@@ -1,4 +1,5 @@
 # bioentro suite
+## Proof of concept
 
 **Informational Zoom Suite for Biological Sequences**
 
