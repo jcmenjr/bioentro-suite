@@ -125,6 +125,7 @@ pangentro compare -i pangenome_metrics.tsv -o comparison/
 ```
 
 ### Step 3 — Network analysis with `netentro`
+NOTE: Proof of concept, work in progress
 
 ```bash
 # Visualize informational similarity network for a target protein
