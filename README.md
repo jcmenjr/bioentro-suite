@@ -1,5 +1,4 @@
-# bioentro suite
-## Proof of concept
+# bioentro suite (proof of concept)
 
 **Informational Zoom Suite for Biological Sequences**
 
@@ -9,7 +8,7 @@ Developed as part of a thesis on the application of information theory to the fu
 
 ---
 
-## Tools
+## Tools (proof of concept, maybe results mean nothing)
 
 | Tool | Description |
 |---|---|
@@ -107,7 +106,7 @@ bioentro -i proteins.faa -m protein -o protein_metrics.tsv
 bioentro -i proteins.faa -m proteome-global -o proteome_metrics.tsv
 ```
 
-### Step 2 — Pangenomic analysis with `pangentro`
+### Step 2 — Pangenomic analysis with `pangentro` (work in progress)
 
 ```bash
 # Run bioentro on all isolates automatically
@@ -125,7 +124,7 @@ pangentro integrate \
 pangentro compare -i pangenome_metrics.tsv -o comparison/
 ```
 
-### Step 3 — Network analysis with `netentro`
+### Step 3 — Network analysis with `netentro` (DO NOT USE, MAYBE THIS WILL BE REMOVED LATER)
 NOTE: Proof of concept, work in progress
 
 ```bash
@@ -160,7 +159,7 @@ netentro validate -i protein_metrics.tsv -o validation.tsv
 
 ---
 
-## netentro subcommands
+## netentro subcommands (DO NOT USE)
 
 | Subcommand | Description |
 |---|---|
@@ -205,7 +204,7 @@ Where $\sigma_{C_k}$ is the mean distance of class members to their centroid. Co
 
 ---
 
-## Background distributions
+## Background distributions (not sure if this is the best option)
 
 | Mode | Background | Biological rationale |
 |---|---|---|
@@ -216,7 +215,7 @@ Where $\sigma_{C_k}$ is the mean distance of class members to their centroid. Co
 
 ---
 
-## Metrics
+## Metrics (probably something of these is useful, probably not)
 
 | Metric | Description | Range |
 |---|---|---|
@@ -233,7 +232,7 @@ Where $\sigma_{C_k}$ is the mean distance of class members to their centroid. Co
 
 ---
 
-## Known limitations
+## Known limitations (and more...)
 
 - `netentro predict` accuracy varies by functional class. Classes with strong compositional signatures (membrane proteins, secreted proteins) predict more reliably than classes defined by positional motifs (polymerases, regulators). Always run `netentro validate` to quantify accuracy for your specific dataset.
 - `IPS_pan` values (pangenomic mode) are lower in absolute terms than individual-mode IPS because the pan-proteome background is more diverse. Statistical differences between categories are meaningful but absolute values should not be compared across datasets with different pangenome sizes.
@@ -303,7 +302,7 @@ bioentro-suite/
 
 ---
 
-## Citation
+## Citation (please don't do this, is only a proof of concept)
 
 If you use bioentro suite in your research, please cite:
 
@@ -326,4 +325,4 @@ If you use bioentro suite in your research, please cite:
 
 MIT — see [LICENSE](LICENSE) for details.
 
-Developed by Julio Méndez · [jcmenjr@gmail.com](mailto:jcmenjr@gmail.com)
+Developed by Julio Méndez · [jcmenjr@gmail.com](mailto:jcmenjr@gmail.com) (I need help)
