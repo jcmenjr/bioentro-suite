@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-pangentro v0.1.0 — Pangenomic Integration Tool for bioentro-suite
+pangentro v0.1.1 — Pangenomic Integration Tool for bioentro-suite
 
 Integrates bioentro informational metrics with Panaroo pangenome output
 to answer the central research question:
@@ -34,13 +34,19 @@ Scientific rationale — IPS modes
     Limitation: backgrounds differ between isolates — means are not directly
     comparable across isolates.
 
-  pangenomic mode:
-    Background = concatenated pan-proteome (all representative sequences from
-    pan_genome_reference.fa). IPS is recalculated for each cluster representative
-    against this unified background.
-    Captures: atypicality within the species-level compositional space.
+  pangenomic mode (v0.1.1):
+    Background = concatenated core genome sequences ONLY (clusters with freq
+    >= CORE_THRESHOLD from pan_genome_reference.fa).
+    Rationale: the core genome represents the stable, conserved "identity" of
+    the species — genes under purifying selection that have been retained in
+    all isolates. Using it as background means IPS_pan measures how different
+    a protein is from the compositional baseline that defines the organism.
+    Shell and cloud proteins are expected to have higher IPS_pan because they
+    deviate from that stable core compositional space — consistent with HGT
+    or clinical niche adaptation.
     Advantage: all IPS values are in the same space — directly comparable.
-    This is the recommended mode for cross-category comparison.
+    Improvement over v0.1.0: using pan-proteome as background diluted the
+    signal because shell/cloud sequences were part of their own background.
 
   Both modes together:
     IPS_individual high + IPS_pangenomic low  → typical in its isolate,
@@ -74,7 +80,7 @@ License: MIT
 
 from __future__ import annotations
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 # ---------------------------------------------------------------------------
 # Standard library
@@ -485,45 +491,80 @@ def _match_cluster_to_bioentro(
 # Pangenomic mode — IPS recalculation against pan-proteome background
 # ---------------------------------------------------------------------------
 
-def build_panproteome_background(
+# ---------------------------------------------------------------------------
+# Pangenomic mode — IPS recalculation against CORE GENOME background
+# ---------------------------------------------------------------------------
+
+def build_core_background(
     pan_reference_faa: Path,
+    core_cluster_ids: set,
     k: int = DEFAULT_K_PROTEIN,
 ) -> Dict[str, float]:
-    """Build k-mer background distribution from pan-proteome reference.
+    """Build k-mer background distribution from core genome sequences only.
 
-    Uses pan_genome_reference.fa from Panaroo — one representative
-    sequence per cluster. This defines the species-level compositional space.
+    The core genome represents the stable, conserved compositional identity
+    of the species — genes present in >= 99% of isolates under purifying
+    selection. Using only core sequences as background ensures that IPS_pan
+    measures atypicality relative to what is truly characteristic of the
+    organism, not diluted by the compositional diversity of rare shell/cloud
+    genes that are part of the signal we want to detect.
+
+    Biological rationale:
+        If we used the full pan-proteome as background (v0.1.0), shell and
+        cloud sequences contributed to their own background, reducing their
+        apparent JSD. By using only core sequences, we define a stable
+        reference frame against which accessory genes can be meaningfully
+        compared.
 
     Args:
-        pan_reference_faa: Path to pan_genome_reference.fa (protein sequences).
-        k:                 K-mer size.
+        pan_reference_faa: Path to pan_genome_reference.fa from Panaroo.
+                           Contains one representative sequence per cluster.
+        core_cluster_ids:  Set of cluster IDs classified as core
+                           (freq >= CORE_THRESHOLD). Built from the
+                           gene_presence_absence.csv matrix.
+        k:                 K-mer size (must match bioentro run).
 
     Returns:
-        Normalized k-mer frequency distribution of the pan-proteome.
+        Normalized k-mer frequency distribution of the core proteome.
 
     Raises:
-        InputError: If file is missing or empty.
+        InputError: If file is missing, empty, or no core sequences found.
     """
     if not pan_reference_faa.exists():
         raise InputError(f"Pan-proteome reference not found: '{pan_reference_faa}'")
 
     logger.info(
-        "Building pan-proteome background from '%s' (k=%d)...",
-        pan_reference_faa.name, k,
+        "Building CORE genome background from '%s' (k=%d, %d core clusters)...",
+        pan_reference_faa.name, k, len(core_cluster_ids),
     )
 
-    all_seq = "".join(
-        str(r.seq).upper()
-        for r in SeqIO.parse(pan_reference_faa, "fasta")
-    )
+    core_seq_parts: List[str] = []
+    n_found = 0
+    n_skipped = 0
 
-    if not all_seq:
-        raise InputError(f"No sequences found in '{pan_reference_faa}'.")
+    for rec in SeqIO.parse(pan_reference_faa, "fasta"):
+        if rec.id in core_cluster_ids:
+            core_seq_parts.append(str(rec.seq).upper())
+            n_found += 1
+        else:
+            n_skipped += 1
 
+    if not core_seq_parts:
+        raise InputError(
+            f"No core sequences found in '{pan_reference_faa.name}'. "
+            f"Checked {n_found + n_skipped} sequences against "
+            f"{len(core_cluster_ids)} core cluster IDs. "
+            "Verify that cluster IDs in the FASTA match those in "
+            "gene_presence_absence.csv."
+        )
+
+    all_seq = "".join(core_seq_parts)
     bg = _compute_kmer_dist(all_seq, k)
+
     logger.info(
-        "Pan-proteome background: %d residues, %d unique %d-mers.",
-        len(all_seq), len(bg), k,
+        "Core background: %d core sequences used, %d skipped (shell/cloud), "
+        "%d residues, %d unique %d-mers.",
+        n_found, n_skipped, len(all_seq), len(bg), k,
     )
     return bg
 
@@ -649,6 +690,12 @@ def cmd_integrate(
 ) -> List[ClusterMetrics]:
     """Cross bioentro results with Panaroo pangenome matrix.
 
+    v0.1.1 change: IPS_pan is now calculated against the CORE GENOME
+    background (clusters with freq >= CORE_THRESHOLD) instead of the full
+    pan-proteome. This produces higher contrast between core and shell/cloud
+    proteins because the background no longer includes the signal being
+    measured.
+
     Args:
         presence_absence: gene_presence_absence.csv from Panaroo.
         bioentro_dir:     Directory with per-isolate bioentro TSVs (individual mode).
@@ -676,7 +723,7 @@ def cmd_integrate(
             )
         bioentro_data = load_bioentro_results(bioentro_dir)
 
-    # Build pan-proteome background if needed
+    # Build core genome background if needed (v0.1.1: core-only background)
     pan_bg: Dict[str, float] = {}
     pan_seqs: Dict[str, str] = {}
     if ips_mode in ("pangenomic", "both"):
@@ -684,8 +731,21 @@ def cmd_integrate(
             raise InputError(
                 "--pan-reference is required for ips-mode 'pangenomic' or 'both'."
             )
-        pan_bg = build_panproteome_background(pan_reference, k)
-        # Index sequences by cluster name for quick lookup
+        # Extract core cluster IDs from the presence-absence matrix
+        core_cluster_ids: set = set(
+            df_pan.loc[df_pan["Category"] == "core", "Cluster"].tolist()
+        )
+        if not core_cluster_ids:
+            logger.warning(
+                "No core clusters found with threshold %.2f. "
+                "Falling back to full pan-proteome background.",
+                CORE_THRESHOLD,
+            )
+            # Fallback: use all sequences (v0.1.0 behavior)
+            core_cluster_ids = set(df_pan["Cluster"].tolist())
+
+        pan_bg = build_core_background(pan_reference, core_cluster_ids, k)
+        # Index ALL sequences by cluster name for IPS calculation
         for rec in SeqIO.parse(pan_reference, "fasta"):
             pan_seqs[rec.id] = str(rec.seq).upper()
 
@@ -1076,8 +1136,12 @@ def _build_parser() -> argparse.ArgumentParser:
         epilog=(
             "IPS modes:\n"
             "  individual  — averages per-isolate IPS; requires --bioentro-dir\n"
-            "  pangenomic  — recalculates against pan-proteome; requires --pan-reference\n"
+            "  pangenomic  — recalculates against CORE GENOME background (v0.1.1);\n"
+            "                requires --pan-reference\n"
             "  both        — calculates both (default; requires both inputs)\n\n"
+            "v0.1.1: IPS_pan now uses core genome as background instead of\n"
+            "full pan-proteome. This increases contrast between core and\n"
+            "shell/cloud proteins.\n\n"
             "Examples:\n"
             "  pangentro integrate -p gene_presence_absence.csv \\\n"
             "      -b bioentro_results/ -r pan_genome_reference.fa \\\n"
