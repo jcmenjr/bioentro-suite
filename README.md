@@ -5,7 +5,7 @@
 
 A collection of command-line tools that apply information theory to biological sequences — measuring Shannon entropy, Jensen-Shannon divergence, Kolmogorov complexity, and an Informational Priority Score (IPS) to characterize and prioritize hypothetical proteins for experimental validation.
 
-Developed as part of a thesis on the application of information theory to the functional prediction of hypothetical proteins in clinical isolates of *Pseudomonas aeruginosa*, with generalization to any bacterial system.
+Developed as part of a thesis on the application of information theory to the priorization of hypothetical proteins in clinical isolates of *Pseudomonas aeruginosa*, with generalization to any bacterial system.
 
 ---
 
@@ -279,6 +279,8 @@ mypy bioentro/
 
 ```
 bioentro-suite/
+├── assets/
+│   ├── logo.png   
 ├── bioentro/
 │   ├── __init__.py       # Package metadata and public API
 │   ├── bioentro.py       # Informational metrics (genome, genes, protein, proteome)
