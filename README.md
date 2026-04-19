@@ -92,7 +92,7 @@ bioentro-suite/
 
 ---
 
-## Citation (please don't do this, is only a proof of concept)
+## Citation
 
 If you use bioentro suite in your research, please cite:
 
