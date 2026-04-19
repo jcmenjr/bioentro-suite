@@ -101,9 +101,9 @@ If you use bioentro suite in your research, please cite:
 ```bibtex
 @software{mendez2026bioentro,
   author  = {Méndez, Julio},
-  title   = {bioentro suite — Informational Zoom Suite for Biological Sequences},
+  title   = {bioentro-suite — Informational Triage Suite for Biological Sequences},
   url     = {https://github.com/jcmenjr/bioentro-suite},
-  version = {0.1.0},
+  version = {0.3.1},
   year    = {2026},
   orcid   = {0009-0007-2468-6261}
 }
