@@ -56,7 +56,6 @@ Thumbs.db
 *.gff
 *.gff3
 *.tsv
-*.png
 
 # But DO track example/test data
 !tests/data/*.fna
