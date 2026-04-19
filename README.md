@@ -1,3 +1,4 @@
+![Logo](./logo.png)
 # bioentro suite (proof of concept)
 
 **Informational Zoom Suite for Biological Sequences**
