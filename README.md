@@ -216,7 +216,7 @@ Where $\sigma_{C_k}$ is the mean distance of class members to their centroid. Co
 
 ---
 
-## Metrics (probably something of these is useful, probably not)
+## Metrics
 
 | Metric | Description | Range |
 |---|---|---|
