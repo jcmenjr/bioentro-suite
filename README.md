@@ -52,7 +52,7 @@ $$IPS = \text{Efficiency} \times \sqrt{JSD} \times \text{Length Penalty}$$
 
 ```bash
 # Clone the repository
-git clone [https://github.com/jcmenjr/bioentro-suite.git](https://github.com/jcmenjr/bioentro-suite.git)
+git clone https://github.com/jcmenjr/bioentro-suite.git
 cd bioentro-suite
 
 # Install in development mode
