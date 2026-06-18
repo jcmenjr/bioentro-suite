@@ -1,0 +1,9 @@
+# Normalize line endings: store LF in the repo and check out LF everywhere.
+# This repo runs on Linux/WSL2 and Ubuntu CI; a CRLF in a shebang breaks
+# execution, so keep text files LF regardless of the editing OS.
+* text=auto eol=lf
+
+# Binary types — never normalize.
+*.png binary
+*.gz binary
+*.db binary

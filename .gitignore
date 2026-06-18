@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.installed.cfg
+*.egg
+
+# Test / tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# pangentro / anvi'o working outputs
+SUMMARY/
+pangentro_out/
+*_pangentro_metrics.txt
+*_items_for_anvio.txt
+*_HP_prioritized.txt
+*_HP_collection.txt
+*_run_report.json
+
+# anvi'o databases (never commit these)
+*.db
+*-PAN.db
+*-GENOMES.db
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Claude Code local settings (personal; not part of the project)
+.claude/settings.local.json
