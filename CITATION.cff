@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use pangentro (bioentro-suite), please cite it as below."
+title: "pangentro (bioentro-suite): anvi'o-native informational prioritization of hypothetical proteins"
+abstract: >-
+  pangentro scores microbial pangenome gene clusters by the Informational
+  Priority Score (IPS = J' · sqrt(JSD) · (1 - e^(-L/L0))) to triage hypothetical
+  proteins for downstream structural and functional work, integrating natively
+  with anvi'o pan databases.
+type: software
+version: "0.5.0"
+date-released: "2026-06-18"
+license: MIT
+repository-code: "https://github.com/jcmenjr/bioentro-suite"
+url: "https://github.com/jcmenjr/bioentro-suite"
+keywords:
+  - bioinformatics
+  - pangenomics
+  - anvio
+  - hypothetical-proteins
+  - information-theory
+  - jensen-shannon
+authors:
+  - family-names: "Méndez"
+    given-names: "Julio"
+    # TODO: add your ORCID, e.g. orcid: "https://orcid.org/0000-0000-0000-0000"
+# TODO: once a paper/preprint exists, add a `preferred-citation:` block (type:
+# article) and a `doi:` so citers point to the publication rather than the repo.

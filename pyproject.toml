@@ -9,8 +9,7 @@ description = "anvi'o-native informational prioritization of hypothetical protei
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
-# TODO
-authors = [{ name = "jcmenjr", email = "jcmenjr@gmail.com" }]
+authors = [{ name = "Julio Méndez", email = "jcmenjr@gmail.com" }]
 keywords = [
     "bioinformatics", "pangenomics", "anvio", "hypothetical-proteins",
     "information-theory", "jensen-shannon", "eggnog",
